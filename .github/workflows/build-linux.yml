@@ -31,6 +31,14 @@ on:
       platform:
         required: true
         type: string
+      runs-on:
+        required: false
+        type: string
+        default: 'ubuntu-22.04'
+      bootjdk-platform:
+        required: false
+        type: string
+        default: 'linux-x64'
       extra-conf-options:
         required: false
         type: string
@@ -68,7 +76,7 @@ on:
 jobs:
   build-linux:
     name: build
-    runs-on: ubuntu-22.04
+    runs-on: ${{ inputs.runs-on }}
     container:
       #image: debian:buster
       image: ubuntu:18.04
@@ -97,7 +105,7 @@ jobs:
         id: bootjdk
         uses: ./.github/actions/get-bootjdk
         with:
-          platform: linux-x64
+          platform: ${{ inputs.bootjdk-platform }}
 
       - name: 'Get JTReg'
         id: jtreg
@@ -194,12 +202,12 @@ jobs:
           body: Build of OpenJDK 17.0.8 with Two Sigma's JGSS enhancements
           draft: false
           prerelease: false
-          tag_name: ts-jgss-jdk17.0.8-ts2-linux-x64
+          tag_name: ts-jgss-jdk17.0.8-ts2-${{ inputs.platform }}
           files: |
             releases-bundles.tar
           target_commitish: ts-jgss-jdk-17.0.8-ts2
           generate_release_notes: false
-          name: ts-jgss-jdk17.0.8-ts2-linux-x64
+          name: ts-jgss-jdk17.0.8-ts2-${{ inputs.platform }}
 
       - name: 'Upload bundles'
         uses: ./.github/actions/upload-bundles

@@ -37,7 +37,7 @@ on:
       platforms:
         description: 'Platform(s) to execute on (comma separated, e.g. "linux-x64, macos, aarch64")'
         required: true
-        default: 'linux-x64, linux-x86, linux-x64-variants, linux-cross-compile, macos-x64, macos-aarch64, windows-x64, windows-aarch64, docs'
+        default: 'linux-x64, linux-aarch64, linux-x86, linux-x64-variants, linux-cross-compile, macos-x64, macos-aarch64, windows-x64, windows-aarch64, docs'
       configure-arguments:
         description: 'Additional configure arguments'
         required: false
@@ -60,6 +60,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       linux-x64: ${{ steps.include.outputs.linux-x64 }}
+      linux-aarch64: ${{ steps.include.outputs.linux-aarch64 }}
       linux-x86: ${{ steps.include.outputs.linux-x86 }}
       linux-x64-variants: ${{ steps.include.outputs.linux-x64-variants }}
       linux-cross-compile: ${{ steps.include.outputs.linux-cross-compile }}
@@ -112,6 +113,7 @@ jobs:
           }
 
           echo "linux-x64=true" >> $GITHUB_OUTPUT
+          echo "linux-aarch64=true" >> $GITHUB_OUTPUT
           echo "linux-x86=false" >> $GITHUB_OUTPUT
           echo "linux-x64-variants=false" >> $GITHUB_OUTPUT
           echo "linux-cross-compile=false" >> $GITHUB_OUTPUT
@@ -137,6 +139,20 @@ jobs:
       make-arguments: ${{ github.event.inputs.make-arguments }}
     # The linux-x64 jdk bundle is used as buildjdk for the cross-compile job
     if: needs.select.outputs.linux-x64 == 'true' || needs.select.outputs.linux-cross-compile == 'true'
+
+  build-linux-aarch64:
+    name: linux-aarch64
+    needs: select
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      platform: linux-aarch64
+      runs-on: ubuntu-22.04-arm
+      bootjdk-platform: linux-aarch64
+      gcc-major-version: '8'
+      apt-gcc-version: '10.4.0-4ubuntu1~22.04'
+      configure-arguments: ${{ github.event.inputs.configure-arguments }}
+      make-arguments: ${{ github.event.inputs.make-arguments }}
+    if: needs.select.outputs.linux-aarch64 == 'true'
 
   build-linux-x86:
     name: linux-x86
@@ -311,6 +327,16 @@ jobs:
       bootjdk-platform: linux-x64
       runs-on: ubuntu-22.04
 
+  test-linux-aarch64:
+    name: linux-aarch64
+    needs:
+      - build-linux-aarch64
+    uses: ./.github/workflows/test.yml
+    with:
+      platform: linux-aarch64
+      bootjdk-platform: linux-aarch64
+      runs-on: ubuntu-22.04-arm
+
   test-linux-x86:
     name: linux-x86
     needs:
@@ -348,6 +374,7 @@ jobs:
     if: always()
     needs:
       - build-linux-x64
+      - build-linux-aarch64
       - build-linux-x86
       - build-linux-x64-hs-nopch
       - build-linux-x64-hs-zero
@@ -359,6 +386,7 @@ jobs:
       - build-windows-x64
       - build-windows-aarch64
       - test-linux-x64
+      - test-linux-aarch64
       - test-linux-x86
       - test-macos-x64
       - test-windows-x64
